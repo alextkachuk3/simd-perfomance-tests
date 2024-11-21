@@ -14,11 +14,15 @@ HINSTANCE hInst;
 HWND hwndDefault, hwndScalar, hwndSimd, hwndTimeScalar, hwndTimeSimd, hwndBtnOpenFile;
 WCHAR filePath[MAX_PATH] = L"";
 
+CONST INT maxWidth = 400;
+CONST INT maxHeight = 600;
+
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void ScalarGray(Bitmap* input, Bitmap* output);
 void SIMDGray(Bitmap* input, Bitmap* output);
 void OnOpenFileClick(HWND hwnd);
 void ResizeAndDisplayImage(HWND hwnd, Bitmap* bmp);
+
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
@@ -39,7 +43,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		CW_USEDEFAULT, CW_USEDEFAULT, 1600, 800, NULL, NULL, hInstance, NULL);
 
 	hwndBtnOpenFile = CreateWindow(L"BUTTON", L"Open Image", WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
-		300, 20, 200, 30, hwnd, (HMENU)1, hInst, NULL);
+		300, 10, 200, 30, hwnd, (HMENU)1, hInst, NULL);
 
 	ShowWindow(hwnd, nShowCmd);
 	UpdateWindow(hwnd);
@@ -61,15 +65,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 		hwndDefault = CreateWindow(L"STATIC", L"Default Image", WS_VISIBLE | WS_CHILD | SS_BITMAP,
-			50, 50, 300, 600, hwnd, NULL, hInst, NULL);
+			50, 50, maxWidth, maxHeight, hwnd, NULL, hInst, NULL);
 		hwndScalar = CreateWindow(L"STATIC", L"Scalar Image", WS_VISIBLE | WS_CHILD | SS_BITMAP,
-			550, 50, 300, 600, hwnd, NULL, hInst, NULL);
+			550, 50, maxWidth, maxHeight, hwnd, NULL, hInst, NULL);
 		hwndSimd = CreateWindow(L"STATIC", L"SIMD Image", WS_VISIBLE | WS_CHILD | SS_BITMAP,
-			1100, 50, 300, 600, hwnd, NULL, hInst, NULL);
+			1100, 50, maxWidth, maxHeight, hwnd, NULL, hInst, NULL);
 		hwndTimeScalar = CreateWindow(L"STATIC", L"Time: N/A", WS_VISIBLE | WS_CHILD,
-			300, 700, 200, 20, hwnd, NULL, hInst, NULL);
+			700, 700, 200, 20, hwnd, NULL, hInst, NULL);
 		hwndTimeSimd = CreateWindow(L"STATIC", L"Time: N/A", WS_VISIBLE | WS_CHILD,
-			550, 700, 200, 20, hwnd, NULL, hInst, NULL);
+			1300, 700, 200, 20, hwnd, NULL, hInst, NULL);
 		break;
 
 	case WM_COMMAND:
@@ -106,6 +110,11 @@ void OnOpenFileClick(HWND hwnd)
 			delete bmp;
 			return;
 		}
+
+		SendMessage(hwndDefault, STM_SETIMAGE, IMAGE_BITMAP, 0);
+		SendMessage(hwndScalar, STM_SETIMAGE, IMAGE_BITMAP, 0);
+		SendMessage(hwndSimd, STM_SETIMAGE, IMAGE_BITMAP, 0);
+
 		ResizeAndDisplayImage(hwndDefault, bmp);
 
 		Bitmap* scalarBmp = new Bitmap(bmp->GetWidth(), bmp->GetHeight(), PixelFormat32bppARGB);
@@ -114,6 +123,7 @@ void OnOpenFileClick(HWND hwnd)
 		auto end = std::chrono::high_resolution_clock::now();
 		SetWindowText(hwndTimeScalar, (L"Time: " + std::to_wstring(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) + L"ms").c_str());
 		ResizeAndDisplayImage(hwndScalar, scalarBmp);
+		delete scalarBmp;
 
 		Bitmap* simdBmp = new Bitmap(bmp->GetWidth(), bmp->GetHeight(), PixelFormat32bppARGB);
 		start = std::chrono::high_resolution_clock::now();
@@ -121,6 +131,7 @@ void OnOpenFileClick(HWND hwnd)
 		end = std::chrono::high_resolution_clock::now();
 		SetWindowText(hwndTimeSimd, (L"Time: " + std::to_wstring(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) + L"ms").c_str());
 		ResizeAndDisplayImage(hwndSimd, simdBmp);
+		delete simdBmp;
 
 		delete bmp;
 	}
@@ -128,32 +139,47 @@ void OnOpenFileClick(HWND hwnd)
 
 void ResizeAndDisplayImage(HWND hwnd, Bitmap* bmp)
 {
-	const int maxWidth = 300;
-	const int maxHeight = 600;
+	HBITMAP oldBitmap = (HBITMAP)SendMessage(hwnd, STM_GETIMAGE, IMAGE_BITMAP, 0);
+	
+	if (oldBitmap)
+		DeleteObject(oldBitmap);
 
-	int width = bmp->GetWidth();
-	int height = bmp->GetHeight();
+	Bitmap* whiteBmp = new Bitmap(maxWidth, maxHeight, PixelFormat32bppARGB);
+	Graphics graphics(whiteBmp);
+	graphics.Clear(Color::White);
 
-	float aspectRatio = static_cast<float>(width) / height;
-	if (width > height)
+	HBITMAP hWhiteBitmap;
+	whiteBmp->GetHBITMAP(Color::White, &hWhiteBitmap);
+
+	SendMessage(hwnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hWhiteBitmap);
+
+	delete whiteBmp;
+
+	INT width = bmp->GetWidth();
+	INT height = bmp->GetHeight();
+
+	FLOAT aspectRatioWidth = width / static_cast<FLOAT>(maxWidth);
+	FLOAT aspectRatioHeight = height / static_cast<FLOAT>(maxHeight);
+
+	if (aspectRatioWidth > 1.0f || aspectRatioHeight > 1.0f)
 	{
-		width = maxWidth;
-		height = static_cast<int>(width / aspectRatio);
-	}
-	else
-	{
-		height = maxHeight;
-		width = static_cast<int>(height * aspectRatio);
+		FLOAT scaleFactor = max(aspectRatioWidth, aspectRatioHeight);
+		width = static_cast<INT>(width / scaleFactor);
+		height = static_cast<INT>(height / scaleFactor);
 	}
 
 	Bitmap* resizedBmp = new Bitmap(width, height, PixelFormat32bppARGB);
-	Graphics graphics(resizedBmp);
-	graphics.DrawImage(bmp, 0, 0, width, height);
+	Graphics resizedGraphics(resizedBmp);
+	resizedGraphics.DrawImage(bmp, 0, 0, width, height);
 
 	HBITMAP hBitmap;
 	resizedBmp->GetHBITMAP(Color::White, &hBitmap);
-	SendMessage(hwnd, STM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBitmap);
+
+	SendMessage(hwnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+
 	delete resizedBmp;
+
+	InvalidateRect(hwnd, NULL, TRUE);
 }
 
 void ScalarGray(Bitmap* input, Bitmap* output)
@@ -192,11 +218,10 @@ void SIMDGray(Bitmap* input, Bitmap* output)
 	UINT width = input->GetWidth();
 	UINT height = input->GetHeight();
 
-	__m256i zero = _mm256_setzero_si256();
 	__m256 grayCoeffR = _mm256_set1_ps(0.299f);
 	__m256 grayCoeffG = _mm256_set1_ps(0.587f);
 	__m256 grayCoeffB = _mm256_set1_ps(0.114f);
-	__m256i q = _mm256_set1_epi32(0x000000FF);
+	__m256i bitmap = _mm256_set1_epi32(0x000000FF);
 
 	for (UINT y = 0; y < height; ++y)
 	{
@@ -216,10 +241,10 @@ void SIMDGray(Bitmap* input, Bitmap* output)
 		{
 			__m256i pixelData = _mm256_loadu_si256((__m256i*)(inputRow + x * 4));
 
-			__m256i b = _mm256_and_si256(pixelData, q);
-			__m256i g = _mm256_and_si256(_mm256_srli_epi32(pixelData, 8), q);
-			__m256i r = _mm256_and_si256(_mm256_srli_epi32(pixelData, 16), q);
-			__m256i a = _mm256_and_si256(_mm256_srli_epi32(pixelData, 24), q);
+			__m256i b = _mm256_and_si256(pixelData, bitmap);
+			__m256i g = _mm256_and_si256(_mm256_srli_epi32(pixelData, 8), bitmap);
+			__m256i r = _mm256_and_si256(_mm256_srli_epi32(pixelData, 16), bitmap);
+			__m256i a = _mm256_and_si256(_mm256_srli_epi32(pixelData, 24), bitmap);
 
 			__m256 b_f = _mm256_cvtepi32_ps(b);
 			__m256 g_f = _mm256_cvtepi32_ps(g);
@@ -230,7 +255,7 @@ void SIMDGray(Bitmap* input, Bitmap* output)
 				_mm256_mul_ps(b_f, grayCoeffB));
 
 			__m256i gray = _mm256_cvtps_epi32(gray_f);
-			gray = _mm256_min_epi32(gray, _mm256_set1_epi32(255));
+			gray = _mm256_min_epi32(gray, bitmap);
 
 			__m256i grayPixel = _mm256_or_si256(
 				_mm256_or_si256(gray, _mm256_slli_epi32(gray, 8)),
