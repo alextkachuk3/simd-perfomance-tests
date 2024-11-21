@@ -258,17 +258,95 @@ void sse_div_double(double* a, double* b, double* c, size_t size)
 }
 
 
+void print_row(const char* op, const char* type, float scalar, float simd)
+{
+	std::cout << std::setw(25) << op << std::setw(15) << type << std::setw(20) << scalar
+		<< std::setw(20) << simd << std::setw(20) << (scalar / simd) << std::endl;
+}
+
+void test_addition(float* a, float* b, float* c, size_t size)
+{
+	float default_add_time = measure(default_add<float>, a, b, c, size);
+	float avx_add_time = measure(avx_add_float, a, b, c, size);
+	print_row("Addition(AVX)", "float", default_add_time, avx_add_time);
+
+	float sse_add_time = measure(sse_add_float, a, b, c, size);
+	print_row("Addition(SSE)", "float", default_add_time, sse_add_time);
+}
+
+void test_multiplication(float* a, float* b, float* c, size_t size)
+{
+	float default_mul_time = measure(default_mul<float>, a, b, c, size);
+	float avx_mul_time = measure(avx_mul_float, a, b, c, size);
+	print_row("Multiplication(AVX)", "float", default_mul_time, avx_mul_time);
+
+	float sse_mul_time = measure(sse_mul_float, a, b, c, size);
+	print_row("Multiplication(SSE)", "float", default_mul_time, sse_mul_time);
+}
+
+void test_division(float* a, float* b, float* c, size_t size)
+{
+	float default_div_time = measure(default_div<float>, a, b, c, size);
+	float avx_div_time = measure(avx_div_float, a, b, c, size);
+	print_row("Division(AVX)", "float", default_div_time, avx_div_time);
+
+	float sse_div_time = measure(sse_div_float, a, b, c, size);
+	print_row("Division(SSE)", "float", default_div_time, sse_div_time);
+}
+
+void test_cos(float* a, float* c, size_t size)
+{
+	float default_cos_time = measure(default_cos<float>, a, c, size);
+	float avx_cos_time = measure(avx_cos_float, a, c, size);
+	print_row("Cos(AVX)", "float", default_cos_time, avx_cos_time);
+}
+
+void test_fma_add(float* a, float* b, float* c, size_t size)
+{
+	float default_fma_add_time = measure(fma_add_default, a, b, c, size);
+	float avx_fma_add_time = measure(avx_fma_add, a, b, c, size);
+	print_row("FMA addition(AVX)", "float", default_fma_add_time, avx_fma_add_time);
+}
+
+void test_int_addition(int* a, int* b, int* c, size_t size)
+{
+	float avx2_add_time = measure(avx2_add_int, a, b, c, size);
+	float default_add_time = measure(default_add<int>, a, b, c, size);
+	print_row("Addition(AVX2)", "int", avx2_add_time, default_add_time);
+}
+
+void test_int_multiplication(int* a, int* b, int* c, size_t size)
+{
+	float avx2_mult_time = measure(avx2_mul_int, a, b, c, size);
+	float default_mult_time = measure(default_mul<int>, a, b, c, size);
+	print_row("Multiplication(AVX2)", "int", avx2_mult_time, default_mult_time);
+}
+
+void test_sse_double_addition(double* a, double* b, double* c, size_t size)
+{
+	float default_add_time = measure(default_add<double>, a, b, c, size);
+	float sse_add_time = measure(sse_add_double, a, b, c, size);
+	print_row("Addition(SSE)", "double", default_add_time, sse_add_time);
+}
+
+void test_sse_double_multiplication(double* a, double* b, double* c, size_t size)
+{
+	float default_mul_time = measure(default_mul<double>, a, b, c, size);
+	float sse_mul_time = measure(sse_mul_double, a, b, c, size);
+	print_row("Multiplication(SSE)", "double", default_mul_time, sse_mul_time);
+}
+
+void test_sse_double_division(double* a, double* b, double* c, size_t size)
+{
+	float default_div_time = measure(default_div<double>, a, b, c, size);
+	float sse_div_time = measure(sse_div_double, a, b, c, size);
+	print_row("Division(SSE)", "double", default_div_time, sse_div_time);
+}
+
 void simd_test()
 {
-	auto print_row = [](const char* op, const char* type, float scalar, float simd)
-		{
-			std::cout << std::setw(25) << op << std::setw(15) << type << std::setw(20) << scalar
-				<< std::setw(20) << simd << std::setw(20) << (scalar / simd) << std::endl;
-		};
-
 	std::cout << std::setw(25) << "Operation" << std::setw(15) << "Type" << std::setw(20) << "Scalar (ms)"
 		<< std::setw(20) << "SIMD (ms)" << std::setw(20) << "Speedup" << std::endl;
-	
 
 	std::vector<size_t> sizes = { 20000, 200000, 2000000, 20000000 };
 
@@ -289,25 +367,11 @@ void simd_test()
 				c[i] = 0.0f;
 			}
 
-			float default_add_time = measure(default_add<float>, a, b, c, size);
-			float avx_add_time = measure(avx_add_float, a, b, c, size);
-			print_row("Addition(AVX)", "float", default_add_time, avx_add_time);
-
-			float default_mul_time = measure(default_mul<float>, a, b, c, size);
-			float avx_mul_time = measure(avx_mul_float, a, b, c, size);
-			print_row("Multiplication(AVX)", "float", default_mul_time, avx_mul_time);
-
-			float default_div_time = measure(default_div<float>, a, b, c, size);
-			float avx_div_time = measure(avx_div_float, a, b, c, size);
-			print_row("Division(AVX)", "float", default_div_time, avx_div_time);
-
-			float default_cos_time = measure(default_cos<float>, a, c, size);
-			float avx_cos_time = measure(avx_cos_float, a, c, size);
-			print_row("Cos(AVX)", "float", default_cos_time, avx_cos_time);
-
-			float default_fma_add_time = measure(fma_add_default, a, b, c, size);
-			float avx_fma_add_time = measure(avx_fma_add, a, b, c, size);
-			print_row("FMA addition(AVX)", "float", default_fma_add_time, avx_fma_add_time);
+			test_addition(a, b, c, size);
+			test_multiplication(a, b, c, size);
+			test_division(a, b, c, size);
+			test_cos(a, c, size);
+			test_fma_add(a, b, c, size);
 
 			delete[] a;
 			delete[] b;
@@ -326,42 +390,8 @@ void simd_test()
 				c[i] = 0;
 			}
 
-			float avx2_add_time = measure(avx2_add_int, a, b, c, size);
-			float default_add_time = measure(default_add<int>, a, b, c, size);
-			print_row("Addition(AVX2)", "int", avx2_add_time, default_add_time);
-
-			float avx2_mult_time = measure(avx2_mul_int, a, b, c, size);
-			float default_mult_time = measure(default_mul<int>, a, b, c, size);
-			print_row("Multiplication(AVX2)", "int", avx2_mult_time, default_mult_time);
-
-			delete[] a;
-			delete[] b;
-			delete[] c;
-		}
-
-		{
-			float* a = new float[size];
-			float* b = new float[size];
-			float* c = new float[size];
-
-			for (size_t i = 0; i < size; i++)
-			{
-				a[i] = i + 1.0f;
-				b[i] = i + 2.0f;
-				c[i] = 0.0f;
-			}
-
-			float default_add_time = measure(default_add<float>, a, b, c, size);
-			float sse_add_time = measure(sse_add_float, a, b, c, size);
-			print_row("Addition(SSE)", "float", default_add_time, sse_add_time);
-
-			float default_mul_time = measure(default_mul<float>, a, b, c, size);
-			float sse_mul_time = measure(sse_mul_float, a, b, c, size);
-			print_row("Multiplication(SSE)", "float", default_mul_time, sse_mul_time);
-
-			float default_div_time = measure(default_div<float>, a, b, c, size);
-			float sse_div_time = measure(sse_div_float, a, b, c, size);
-			print_row("Division(SSE)", "float", default_div_time, sse_div_time);
+			test_int_addition(a, b, c, size);
+			test_int_multiplication(a, b, c, size);
 
 			delete[] a;
 			delete[] b;
@@ -380,23 +410,15 @@ void simd_test()
 				c[i] = 0.0;
 			}
 
-			float default_add_time = measure(default_add<double>, a, b, c, size);
-			float sse_add_time = measure(sse_add_double, a, b, c, size);
-			print_row("Addition(SSE)", "double", default_add_time, sse_add_time);
-
-			float default_mul_time = measure(default_mul<double>, a, b, c, size);
-			float sse_mul_time = measure(sse_mul_double, a, b, c, size);
-			print_row("Multiplication(SSE)", "double", default_mul_time, sse_mul_time);
-
-			float default_div_time = measure(default_div<double>, a, b, c, size);
-			float sse_div_time = measure(sse_div_double, a, b, c, size);
-			print_row("Division(SSE)", "double", default_div_time, sse_div_time);
+			test_sse_double_addition(a, b, c, size);
+			test_sse_double_multiplication(a, b, c, size);
+			test_sse_double_division(a, b, c, size);
 
 			delete[] a;
 			delete[] b;
 			delete[] c;
 		}
-	}	
+	}
 }
 
 int main()
