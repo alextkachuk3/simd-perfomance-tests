@@ -2,13 +2,12 @@
 #include <chrono>
 #include <iomanip>
 #include <vector>
-#include <new>
 #include <immintrin.h>
 
 template <typename Func, typename... Args>
 float measure(Func func, Args... args)
 {
-	int iterations = 50;
+	int iterations = 100;
 	float total_time = 0;
 	for (size_t i = 0; i < iterations; i++)
 	{
