@@ -23,7 +23,6 @@ void SIMDGray(Bitmap* input, Bitmap* output);
 void OnOpenFileClick(HWND hwnd);
 void ResizeAndDisplayImage(HWND hwnd, Bitmap* bmp);
 
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
 	GdiplusStartupInput gdiplusStartupInput;
@@ -140,7 +139,7 @@ void OnOpenFileClick(HWND hwnd)
 void ResizeAndDisplayImage(HWND hwnd, Bitmap* bmp)
 {
 	HBITMAP oldBitmap = (HBITMAP)SendMessage(hwnd, STM_GETIMAGE, IMAGE_BITMAP, 0);
-	
+
 	if (oldBitmap)
 		DeleteObject(oldBitmap);
 
@@ -218,10 +217,10 @@ void SIMDGray(Bitmap* input, Bitmap* output)
 	UINT width = input->GetWidth();
 	UINT height = input->GetHeight();
 
-	__m256 grayCoeffR = _mm256_set1_ps(0.299f);
-	__m256 grayCoeffG = _mm256_set1_ps(0.587f);
-	__m256 grayCoeffB = _mm256_set1_ps(0.114f);
-	__m256i bitmap = _mm256_set1_epi32(0x000000FF);
+	const __m256 grayCoeffR = _mm256_set1_ps(0.299f);
+	const __m256 grayCoeffG = _mm256_set1_ps(0.587f);
+	const __m256 grayCoeffB = _mm256_set1_ps(0.114f);
+	const __m256i bitmap = _mm256_set1_epi32(0x000000FF);
 
 	for (UINT y = 0; y < height; ++y)
 	{
